@@ -2,9 +2,8 @@
 //  main.cpp
 //  2016_2_21
 //
-// Assignment: nextday
+// Assignment: date difference
 //
-
 
 #include <iostream>
 using namespace std;
@@ -12,7 +11,12 @@ using namespace std;
 // functions: get/show date
 void GetDate(int &m, int &d, int &y);
 void ShowDate(int m, int d, int y);
-bool NextDate(int &m, int &d, int &y);
+
+// function: date calculation
+int DateDiff(int &m1, int &d1, int &y1, int &m2, int &d2, int &y2);
+int DayNo(int m, int d, int y);
+void DayNoToDate(int dayNumber, int &m, int &d, int &y);
+int DaysInYear(int y);
 
 // function: user input validation
 bool DateIsValid(int &m, int &d, int &y);
@@ -24,33 +28,56 @@ int DaysInMonth (int m, int y);
  *
  */
 int main() {
-    // initialize variable: month, day, year
-    int m, d, y;
+    // initialize variable: month, day, year, number of days to add
+    int m1, d1, y1, m2, d2, y2;
+    bool invalid_start_date = false;
+    bool invalid_end_date = false;
     char ans;
     
     do
     {
-        GetDate(m, d, y);
-        if (!DateIsValid(m, d, y)) {
-            cout << "INVALID INPUT!" << endl;
-            ans = 'y';
-            continue;
+        if (!invalid_start_date) {
+            cout << "Enter the start date in m/d/y format: ";
+            GetDate(m1, d1, y1);
+            
+            if (!DateIsValid(m1, d1, y1)) {
+                cout << "INVALID INPUT!" << endl;
+                invalid_start_date = false;
+                ans = 'y';
+                continue;
+            }
+            else {
+                invalid_start_date = true;
+            }
         }
         
-        cout << "The day after ";
-        ShowDate(m, d, y);
-        bool errorCode = NextDate(m, d, y);
-        if (!errorCode) {
-            cout << " is ";
-            ShowDate(m, d, y);
+        
+        if (!invalid_end_date) {
+            cout << "Enter the end date in m/d/y format: ";
+            GetDate(m2, d2, y2);
+            
+            if (!DateIsValid(m2, d2, y2)) {
+                cout << "INVALID INPUT!" << endl;
+                invalid_end_date = false;
+                ans = 'y';
+                continue;
+            }
+            else {
+                invalid_end_date = true;
+            }
         }
-        else {
-            cout << endl << "ERROR: date is invalid." << endl;
-        }
+        
+        int n_date_diff = DateDiff(m1, d1, y1, m2, d2, y2);
+        cout << "Difference between the dates in days: " << n_date_diff << endl;
+        cout << "Convert a day number: " << n_date_diff << " to a start date: ";
+        DayNoToDate(n_date_diff, m1, d1, y1);
+        ShowDate(m1, d1, y1);
         
         cout << endl << "Test again? (Type y for yes or n for no): ";
         cin >> ans;
         cout << endl;
+        invalid_start_date = false;
+        invalid_end_date = false;
     } while(ans == 'y' || ans == 'Y');
     
     return 0;
@@ -59,7 +86,6 @@ int main() {
 // GetDate function: user enter date in m/d/y format
 void GetDate(int &m, int &d, int &y) {
     char slash;
-    cout << "Enter the calendar date in m/d/y format: ";
     cin >> m >> slash >> d >> slash >> y;
 }
 
@@ -68,31 +94,107 @@ void ShowDate(int m, int d, int y) {
     cout << m << "/" << d << "/" << y;
 }
 
-// NextDate function
-// 유저가 입력한 month 을 기반으로 그달의 날짜를 확인합니다
-// 유저가 입력한 day 가 그달의 총 날짜수와 같으면 month + 1 하고 day 을 1 로 지정합니다.
-// month 가 12 보다 크면 year + 1 하고 month 을 1 로 합니다.
-bool NextDate(int &m, int &d, int &y) {
-    if (!DateIsValid(m, d, y)) {
-        return true;
+// DateDiff function
+// return total number of days between start and end date
+// 참조: 총날짜수를 계산함에 있으서 instructor 가 DayNo function parameters 을 지정하였기예 날짜계산이 많이 복잡합니다.
+// 예를들어 2016 이면 0 부터 시작인데 0 AD (BC 까지는 계산하지 않음 년도를 minus 표시하지 않기때문임) 는 윤달이 있는년도이기에
+// start/end date 을 기본으로 계산할경우 1 day 을 더해주어야 합니다. 다만 start/end year 둘다 윤달이 있는경우에는 DaysInYear function
+// 윤달에 따른 날짜를 계산하기때문에 1 day 을 더할필요는 없습니다.
+int DateDiff(int &m1, int &d1, int &y1, int &m2, int &d2, int &y2) {
+    int n_first_date = DayNo(m1, d1, y1);
+    int n_second_date = DayNo(m2, d2, y2);
+    int n_days_diff = n_second_date - n_first_date;
+    
+    return n_days_diff;
+}
+
+// DayNo function
+// calculate total number of days
+// parameter date 에 마춰 1월1일 부터 input date 까지 총 몇일인지 계산함
+int DayNo(int m, int d, int y) {
+    int m_start = 1;
+    int days_month = 0;
+    // parameter year 에따라 총날짜수를 계산함
+    int days_yr = DaysInYear(y);
+    
+    // 1월1일부터 parameter month, day 까지의 날짜수를 총계산함
+    while (m_start < m) {
+        days_month += DaysInMonth(m_start, y);
+        m_start ++;
     }
-    else {
-        int days_in_month = DaysInMonth(m, y);
-        if (d == days_in_month) {
-            m++;
-            d = 1;
+    
+    return days_yr + days_month + d;
+}
+
+// days in year function
+// calculate total number of days in year
+// 윤달이 있는 년도를 확인 후 윤달이 있는 년도는 366일 없는 년도는 365 로 계산함
+int DaysInYear(int y) {
+    int start_year = 0;
+    int total_days = 0;
+    
+    while (start_year < y) {
+        if (IsLeapYear(start_year)) {
+            total_days += 366;
         }
         else {
-            d++;
+            total_days += 365;
         }
+        start_year++;
+    }
+    
+    return total_days;
+}
+
+// DayNoToDate function
+// number of days to add/substract from parameter month, day, year
+void DayNoToDate(int dayNumber, int &m, int &d, int &y) {
+    if (!DateIsValid(m, d, y)) {
+        return;
+    }
+    else {
+        int new_day = d + dayNumber;
+        bool flag;
         
-        if (m > 12) {
-            y++;
-            m = 1;
-        }
-        return false;
+        do
+        {
+            // start date 이 end date 보다 클경우
+            if(new_day > DaysInMonth(m, y)) {
+                new_day -= DaysInMonth(m, y);
+                m++;
+                flag = true;
+            }
+            // start date 이 end date 보다 작을경우
+            else if (new_day < 0) {
+                new_day += DaysInMonth(m-1, y);
+                m--;
+                if (new_day < 0) {
+                    flag = true;
+                }
+                else {
+                    flag = false;
+                }
+            }
+            else {
+                flag = false;
+            }
+            
+            // start date 이 end date 보다 클경우
+            if (m > 12) {
+                y++;
+                m = 1;
+            }
+            // start date 이 end date 보다 작을경우
+            else if (m == 0) {
+                y--;
+                m = 13;
+            }
+            
+        } while(flag);
+        d = new_day;
     }
 }
+
 
 // DateIsValid function: validate entered month and date
 // 유저가 잘못된 date 을 입력할경우 return false
