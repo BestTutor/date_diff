@@ -131,24 +131,10 @@ int DayNo(int m, int d, int y) {
 // 윤달이 있는 년도를 확인 후 윤달이 있는 년도는 366일 없는 년도는 365 로 계산함
 int DaysInYear(int y) {
     int year = y - 1;
-    int total_days = 0;
-    
-//    while (start_year < y) {
-//        if (IsLeapYear(start_year)) {
-//            total_days += 366;
-//        }
-//        else {
-//            total_days += 365;
-//        }
-//        start_year++;
-//    }
-    
     int leap_count = (year / 4) + 1;
     int no_leap_count = year - leap_count;
     
-    total_days = (leap_count * 366) + (no_leap_count * 365);
-    
-    return total_days;
+    return (leap_count * 366) + (no_leap_count * 365);
 }
 
 // DayNoToDate function
